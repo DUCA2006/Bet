@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101510">
+    <title>DUCA - AI Football Intelligence</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+    <header class="header">
+        <div class="brand">
+            <div class="logo">D</div>
+            <div>
+                <h2>DUCA</h2>
+                <span>AI FOOTBALL INTELLIGENCE</span>
+            </div>
+        </div>
+
+        <button class="new-chat" onclick="newChat()">＋</button>
+    </header>
+
+    <main class="chat-area" id="chatArea">
+
+        <section class="welcome" id="welcome">
+            <div class="welcome-logo">D</div>
+            <h1>Welcome to DUCA.</h1>
+            <p>Your intelligent football analysis assistant.</p>
+
+            <div class="suggestions">
+                <button onclick="sendSuggestion('Analyse today’s football matches')">
+                    ⚽ Analyse today's matches
+                </button>
+
+                <button onclick="sendSuggestion('Find the best supported football predictions today')">
+                    🎯 Today's predictions
+                </button>
+
+                <button onclick="sendSuggestion('Analyse Arsenal next match')">
+                    📊 Match analysis
+                </button>
+
+                <button onclick="sendSuggestion('Explain how to build a 100 odds accumulator')">
+                    🔥 Accumulator analysis
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="input-section">
+        <div class="input-box">
+            <textarea id="userInput"
+                placeholder="Message DUCA..."
+                rows="1"></textarea>
+
+            <button id="sendBtn" onclick="sendMessage()">↑</button>
+        </div>
+
+        <p class="disclaimer">
+            DUCA AI can make mistakes. Predictions are not guarantees.
+        </p>
+    </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #101510;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    height: 100dvh;
+}
+
+.app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 850px;
+    margin: auto;
+}
+
+.header {
+    height: 75px;
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #252d26;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.logo, .welcome-logo {
+    background: #a5e65a;
+    color: #101510;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    border-radius: 13px;
+}
+
+.logo {
+    width: 43px;
+    height: 43px;
+    font-size: 24px;
+}
+
+.brand h2 {
+    font-size: 20px;
+    letter-spacing: 2px;
+}
+
+.brand span {
+    font-size: 9px;
+    color: #9da99d;
+    letter-spacing: 1px;
+}
+
+.new-chat {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #354235;
+    background: #1b241b;
+    color: #a5e65a;
+    font-size: 24px;
+}
+
+.chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 25px 17px;
+}
+
+.welcome {
+    text-align: center;
+    margin: 65px auto 30px;
+    max-width: 450px;
+}
+
+.welcome-logo {
+    width: 75px;
+    height: 75px;
+    margin: auto auto 22px;
+    font-size: 43px;
+    border-radius: 23px;
+}
+
+.welcome h1 {
+    font-size: 29px;
+    margin-bottom: 10px;
+}
+
+.welcome p {
+    color: #9ba79b;
+    font-size: 14px;
+}
+
+.suggestions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 35px;
+}
+
+.suggestions button {
+    padding: 17px 12px;
+    border: 1px solid #303b30;
+    border-radius: 15px;
+    background: #192019;
+    color: #e3e9e3;
+    text-align: left;
+    font-size: 12px;
+}
+
+.suggestions button:active {
+    background: #263526;
+}
+
+.input-section {
+    padding: 12px 15px 15px;
+    border-top: 1px solid #252d26;
+}
+
+.input-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px;
+    background: #202820;
+    border: 1px solid #394539;
+    border-radius: 20px;
+}
+
+textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-family: inherit;
+    font-size: 15px;
+    resize: none;
+    max-height: 120px;
+    padding: 8px;
+}
+
+textarea::placeholder {
+    color: #899489;
+}
+
+#sendBtn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 13px;
+    background: #a5e65a;
+    color: #101510;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+.disclaimer {
+    color: #758075;
+    text-align: center;
+    font-size: 10px;
+    margin-top: 12px;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 25px;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.message-content {
+    max-width: 88%;
+    padding: 14px 16px;
+    border-radius: 17px;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.user-message .message-content {
+    background: #293929;
+    border-bottom-right-radius: 4px;
+}
+
+.ai-message .message-content {
+    background: #1b231b;
+    border: 1px solid #303b30;
+    border-bottom-left-radius: 4px;
+}
+
+.ai-label {
+    color: #a5e65a;
+    font-size: 11px;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+@media(max-width: 480px) {
+    .welcome {
+        margin-top: 45px;
+    }
+
+    .welcome h1 {
+        font-size: 25px;
+    }
+
+    .suggestions {
+        grid-template-columns: 1fr;
+    }
+
+    .suggestions button {
+        padding: 15px;
+    }
+}
