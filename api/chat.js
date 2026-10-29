@@ -93,12 +93,13 @@ Your name is DUCA.
     const data = await response.json();
     
     if (!response.ok) {
-      console.error("Gemini error:", data);
-      
-      return res.status(502).json({
-        error: "Gemini could not process your request."
-      });
-    }
+  console.error("Gemini error:", data);
+  
+  return res.status(502).json({
+    error: data.error?.message || "Gemini API request failed.",
+    status: data.error?.status || "UNKNOWN"
+  });
+}
     
     const answer =
       data.candidates?.[0]?.content?.parts
