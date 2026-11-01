@@ -9,7 +9,6 @@ export default async function handler(req, res) {
 
   try {
     const { message, history = [] } = req.body;
-
     if (!message) {
       return res.status(400).json({
         error: "Message is required"
@@ -23,19 +22,16 @@ export default async function handler(req, res) {
       });
     }
 
-    // --- OPTIONAL: Handle direct backend triggers or let AI decide ---
-    // If user explicitly asks for live fixtures, you can fetch them directly or pass context.
     let liveFixturesContext = "";
     const lowerMsg = message.toLowerCase();
-    
+         
     if (lowerMsg.includes("today") || lowerMsg.includes("matches") || lowerMsg.includes("fixtures") || lowerMsg.includes("prediction")) {
       const fixtureRes = await fetchUpcomingEvents({ maxPages: 2 });
       if (fixtureRes.ok && fixtureRes.events.length > 0) {
-        // Provide a summary of top upcoming matches to the model context
         const sampleEvents = fixtureRes.events.slice(0, 15).map(e => 
-          `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition}) at ${new Date(e.startTime).toLocaleString()}`
+           `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition}) at ${new Date(e.startTime).toLocaleString()}`
         ).join("\n");
-        
+                 
         liveFixturesContext = `\n\n[LIVE SPORTYBET FIXTURES RETRIEVED]:\n${sampleEvents}`;
       }
     }
@@ -59,15 +55,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes.
-
-Your responsibilities:
-1. Analyse football matches using real fixture data when available.
-2. Explain recent team performance, home/away form, and head-to-head records.
-3. Reference live SportyBet fixture data provided in the prompt context to ground your predictions.
-4. If asked to generate a booking code or slip, explain the selections clearly.
-5. Never invent false fixture details if real data is missing; explain uncertainty honestly.
-Use simple English and clear explanations. Your name is DUCA.`
+              text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes. Your responsibilities: 1. Analyse football matches using real fixture data when available. 2. Explain recent team performance, home/away form, and head-to-head records. 3. Reference live SportyBet fixture data provided in the prompt context to ground your predictions. 4. If asked to generate a booking code or slip, explain the selections clearly. 5. Never invent false fixture details if real data is missing; explain uncertainty honestly. Use simple English and clear explanations. Your name is DUCA.`
             }]
           },
           contents,
@@ -80,7 +68,6 @@ Use simple English and clear explanations. Your name is DUCA.`
     );
 
     const data = await response.json();
-
     if (!response.ok) {
       console.error("Gemini error:", data);
       return res.status(502).json({
