@@ -2,108 +2,112 @@ import { fetchUpcomingEvents, fetchEventDetail, submitShareCode } from "./sporty
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      error: "Method not allowed"
+    });
   }
-
+  
   try {
     const { message, history = [] } = req.body;
+    
     if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+      return res.status(400).json({
+        error: "Message is required"
+      });
     }
-
+    
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "Gemini API key is not configured." });
+      return res.status(500).json({
+        error: "Gemini API key is not configured."
+      });
     }
-
+    
+    // --- OPTIONAL: Handle direct backend triggers or let AI decide ---
+    // If user explicitly asks for live fixtures, you can fetch them directly or pass context.
     let liveFixturesContext = "";
     const lowerMsg = message.toLowerCase();
-         
+    
     if (lowerMsg.includes("today") || lowerMsg.includes("matches") || lowerMsg.includes("fixtures") || lowerMsg.includes("prediction")) {
-      try {
-        const fixtureRes = await fetchUpcomingEvents({ maxPages: 1 });
-        if (fixtureRes.ok && fixtureRes.events.length > 0) {
-          const sampleEvents = fixtureRes.events.slice(0, 10).map(e => 
-             `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition})`
-          ).join("\n");
-                   
-          liveFixturesContext = `\n\n[LIVE SPORTYBET FIXTURES]:\n${sampleEvents}`;
-        }
-      } catch (err) {
-        console.error("SportyBet background fetch error:", err);
+      const fixtureRes = await fetchUpcomingEvents({ maxPages: 2 });
+      if (fixtureRes.ok && fixtureRes.events.length > 0) {
+        // Provide a summary of top upcoming matches to the model context
+        const sampleEvents = fixtureRes.events.slice(0, 15).map(e =>
+          `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition}) at ${new Date(e.startTime).toLocaleString()}`
+        ).join("\n");
+        
+        liveFixturesContext = `\n\n[LIVE SPORTYBET FIXTURES RETRIEVED]:\n${sampleEvents}`;
       }
     }
-
+    
     const contents = [
-      ...history.slice(-10),
+      ...history.slice(-12),
       {
         role: "user",
         parts: [{ text: message + liveFixturesContext }]
       }
     ];
+    
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes.
 
-    // Valid Gemini endpoints to fallback through safely
-    const modelsToTry = [
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-lite-preview-02-05",
-      "gemini-1.5-flash"
-    ];
-
-    let answer = null;
-    let lastError = null;
-
-    for (const modelName of modelsToTry) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": apiKey
-            },
-            body: JSON.stringify({
-              systemInstruction: {
-                parts: [{
-                  text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes. Use simple English and clear explanations.`
-                }]
-              },
-              contents,
-              generationConfig: {
-                temperature: 0.5,
-                maxOutputTokens: 1000
-              }
-            })
+Your responsibilities:
+1. Analyse football matches using real fixture data when available.
+2. Explain recent team performance, home/away form, and head-to-head records.
+3. Reference live SportyBet fixture data provided in the prompt context to ground your predictions.
+4. If asked to generate a booking code or slip, explain the selections clearly.
+5. Never invent false fixture details if real data is missing; explain uncertainty honestly.
+Use simple English and clear explanations. Your name is DUCA.`
+            }]
+          },
+          contents,
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: 1500
           }
-        );
-
-        const data = await response.json();
-
-        if (response.ok && data.candidates?.[0]?.content?.parts) {
-          answer = data.candidates[0].content.parts
-            .map(part => part.text || "")
-            .join("")
-            .trim();
-          
-          if (answer) break; // Successfully got an answer, stop looping!
-        } else {
-          lastError = data.error?.message || `HTTP ${response.status} from ${modelName}`;
-        }
-      } catch (err) {
-        lastError = err.message;
+        })
       }
-    }
-
-    if (!answer) {
+    );
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error("Gemini error:", data);
       return res.status(502).json({
-        error: lastError || "Unable to reach DUCA AI right now. Please try again."
+        error: data.error?.message || "Gemini API request failed.",
+        status: data.error?.status || "UNKNOWN"
       });
     }
-
-    return res.status(200).json({ reply: answer });
-
+    
+    const answer = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("")
+      .trim();
+    
+    if (!answer) {
+      return res.status(502).json({
+        error: "DUCA received an empty response."
+      });
+    }
+    
+    return res.status(200).json({
+      reply: answer
+    });
+    
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Something went wrong. Try again." });
+    return res.status(500).json({
+      error: "Something went wrong. Try again."
+    });
   }
 }
