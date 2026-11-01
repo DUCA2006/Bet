@@ -25,28 +25,32 @@ export default async function handler(req, res) {
     let liveFixturesContext = "";
     const lowerMsg = message.toLowerCase();
          
+    // Only fetch 1 page quickly if user asks for matches to prevent timeouts
     if (lowerMsg.includes("today") || lowerMsg.includes("matches") || lowerMsg.includes("fixtures") || lowerMsg.includes("prediction")) {
-      const fixtureRes = await fetchUpcomingEvents({ maxPages: 2 });
-      if (fixtureRes.ok && fixtureRes.events.length > 0) {
-        const sampleEvents = fixtureRes.events.slice(0, 15).map(e => 
-           `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition}) at ${new Date(e.startTime).toLocaleString()}`
-        ).join("\n");
-                 
-        liveFixturesContext = `\n\n[LIVE SPORTYBET FIXTURES RETRIEVED]:\n${sampleEvents}`;
+      try {
+        const fixtureRes = await fetchUpcomingEvents({ maxPages: 1 });
+        if (fixtureRes.ok && fixtureRes.events.length > 0) {
+          const sampleEvents = fixtureRes.events.slice(0, 10).map(e => 
+             `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition})`
+          ).join("\n");
+                   
+          liveFixturesContext = `\n\n[LIVE SPORTYBET FIXTURES]:\n${sampleEvents}`;
+        }
+      } catch (err) {
+        console.error("SportyBet fetch background error:", err);
       }
     }
 
     const contents = [
-      ...history.slice(-12),
+      ...history.slice(-10),
       {
         role: "user",
         parts: [{ text: message + liveFixturesContext }]
       }
     ];
 
-      const response = await fetch(
+    const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-
       {
         method: "POST",
         headers: {
@@ -56,13 +60,13 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes. Your responsibilities: 1. Analyse football matches using real fixture data when available. 2. Explain recent team performance, home/away form, and head-to-head records. 3. Reference live SportyBet fixture data provided in the prompt context to ground your predictions. 4. If asked to generate a booking code or slip, explain the selections clearly. 5. Never invent false fixture details if real data is missing; explain uncertainty honestly. Use simple English and clear explanations. Your name is DUCA.`
+              text: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, live odds evaluation, and generating valid betting booking share codes. Use simple English and clear explanations.`
             }]
           },
           contents,
           generationConfig: {
             temperature: 0.5,
-            maxOutputTokens: 1500
+            maxOutputTokens: 1000
           }
         })
       }
@@ -70,10 +74,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("Gemini error:", data);
       return res.status(502).json({
-        error: data.error?.message || "Gemini API request failed.",
-        status: data.error?.status || "UNKNOWN"
+        error: data.error?.message || "The AI model is busy. Please try again in a few seconds.",
+        status: data.error?.status || "HIGH_DEMAND"
       });
     }
 
