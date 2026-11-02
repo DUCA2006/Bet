@@ -54,10 +54,9 @@ export default async function handler(req, res) {
         return null;
       }
       
-      // Find the specific market and outcome
       const targetMarket = detail.markets.find((m) => m.id === leg.marketId);
       const targetOutcome = targetMarket?.outcomes.find((o) => o.id === leg.outcomeId && o.isActive === 1);
-
+      
       if (!targetMarket || !targetOutcome) {
         problems.push({ index, reason: "This market or outcome is no longer active on SportyBet." });
         return null;
