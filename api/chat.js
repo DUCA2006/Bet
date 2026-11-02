@@ -8,7 +8,7 @@ const MAX_FIXTURES = 5;
 const MAX_LEGS = 10;
 const WINDOW_HOURS = 168;
 
-const SYSTEM_PROMPT = `You are DUCA — a friendly football betting analyst for SportyBet Nigeria. You are warm and fun, and you calculate like a scientist: every pick is backed by statistics.
+const SYSTEM_PROMPT = `You are DUCA — a friendly football betting analyst. You are warm and fun, and you calculate like a scientist: every pick is backed by statistics.
 
 You receive LIVE FIXTURE DATA, one JSON object per line:
 - e = eventId, t = kick-off (Africa/Lagos), h = home team, a = away team, c = competition
