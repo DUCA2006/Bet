@@ -44,17 +44,15 @@ export default async function handler(req, res) {
             `- [ID: ${e.eventId}] ${e.homeTeam} vs ${e.awayTeam} (${e.competition}) at ${new Date(e.startTime).toLocaleString()}`
           )
           .join("\n");
-        liveFixturesContext = `
-[LIVE SPORTYBET FIXTURES RETRIEVED]:
-${sampleEvents}`;
+        liveFixturesContext = ` [LIVE SPORTYBET FIXTURES RETRIEVED]: ${sampleEvents}`;
       }
     }
 
     const messages = [
       {
         role: "system",
-        content: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria.
-Your speciality is football statistics, match analysis, predictions, and SportyBet fixtures.
+        content: `You are DUCA, an intelligent football analysis assistant integrated with SportyBet Nigeria. Your speciality is football statistics, match analysis, predictions, and SportyBet fixtures. 
+
 YOUR RESPONSIBILITIES:
 1. Analyse football matches using real fixture data when available.
 2. When users ask for predictions or accumulator tips, recommend specific outcomes (Home Win, Away Win, Over 2.5, etc.) and include a special widget tag at the very end of your response in this exact format:
@@ -113,6 +111,7 @@ YOUR RESPONSIBILITIES:
     return res.status(200).json({
       reply: answer
     });
+
   } catch (error) {
     console.error("DUCA server error:", error);
     return res.status(500).json({
