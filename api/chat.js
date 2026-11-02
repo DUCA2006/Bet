@@ -5,7 +5,8 @@ export const config = { maxDuration: 60 };
 const MODEL = "openai/gpt-oss-20b";
 const MAX_FIXTURES = 8;
 const MAX_LEGS = 10;
-const WINDOW_HOURS = 12;
+const WINDOW_HOURS = 168; // Expands the search window to 7 days ahead
+
 
 const SYSTEM_PROMPT = `You are DUCA — a friendly football betting analyst for SportyBet Nigeria. You are warm and fun, and you calculate like a scientist: every pick is backed by statistics.
 
