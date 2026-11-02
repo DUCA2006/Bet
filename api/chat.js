@@ -3,9 +3,9 @@ import { fetchUpcomingEvents, fetchEventDetail, submitShareCode } from "./sporty
 export const config = { maxDuration: 60 };
 
 const MODEL = "openai/gpt-oss-20b";
-const MAX_FIXTURES = 28;
-const MAX_LEGS = 30;
-const WINDOW_HOURS = 48;
+const MAX_FIXTURES = 8;
+const MAX_LEGS = 10;
+const WINDOW_HOURS = 12;
 
 const SYSTEM_PROMPT = `You are DUCA — a friendly football betting analyst for SportyBet Nigeria. You are warm and fun, and you calculate like a scientist: every pick is backed by statistics.
 
@@ -15,13 +15,12 @@ You receive LIVE FIXTURE DATA, one JSON object per line:
 
 Rules:
 1. Only use teams, odds and ids from the data. Never invent fixtures, odds or ids.
-2. Open with a friendly line ("Okay, let me check the safest games for you 📊"), then analyse statistically: convert each candidate's odds to implied probability (1/odds as a %), quote that number, and explain why the pick covers (short price, double-chance cover, goals line, market agreement).
+2. Open with a friendly line ("Okay, let me check the safest games for you 📊"), then analyse statistically: convert each candidate's odds to implied probability (1/odds as a %), quote that number, and explain why the pick covers.
 3. Tag each pick [Banker], [Solid] or [Lean] with a short reason.
-4. If the user gives a target (e.g. "100 odds, 25 games"), build exactly that: start from the safest picks, add games one by one until the multiplied odds reach the target, and state the final combined odds and the game count you used. Respect the number of games asked for (default 5, maximum 30).
-5. Booking codes: set wantsCode true and put every pick in picks using the EXACT ids: eventId = e, marketId = m.id, specifier = m.s, outcomeId = o.id. Diversify across fixtures and markets; never take two outcomes from the same market of the same game.
-6. If the message is not about football or betting, answer in one friendly line and steer back.
-7. End every answer with two final lines: first a fun, feel-good line in the spirit of Ted Lasso (e.g. "Sometimes we just need a little more belief 🧡"), then exactly: "Always gamble with what you can afford to lose."
-8. Return JSON only in this shape:
+4. Booking codes: set wantsCode true and put every pick in picks using the EXACT ids: eventId = e, marketId = m.id, specifier = m.s, outcomeId = o.id. Diversify across fixtures and markets.
+5. If the message is not about football or betting, answer in one friendly line and steer back.
+6. End every answer with two final lines: first a fun, feel-good line in the spirit of Ted Lasso, then exactly: "Always gamble with what you can afford to lose."
+7. Return JSON only in this shape:
 {"reply": string, "wantsCode": boolean, "picks": [{"eventId": string, "marketId": string, "specifier": string, "outcomeId": string}]}`;
 
 function lagosLabel(ts) {
@@ -126,7 +125,7 @@ export default async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: "Groq API key is not configured." });
 
     const now = Date.now();
-    const listing = await fetchUpcomingEvents({ maxPages: 6 });
+    const listing = await fetchUpcomingEvents({ maxPages: 1 });
     if (!listing.ok || !listing.events.length) {
       return res.status(502).json({
         error: listing.diagnostics?.errors?.[0] || "SportyBet fixtures are unavailable right now.",
@@ -162,11 +161,11 @@ export default async function handler(req, res) {
 
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
-      ...history.slice(-6).map((item) => ({
+      ...history.slice(-4).map((item) => ({
         role: item.role === "model" || item.role === "assistant" ? "assistant" : "user",
         content: String(
           Array.isArray(item.parts) ? item.parts.map((p) => p.text || "").join("") : item.content || "",
-        ).slice(0, 600),
+        ).slice(0, 400),
       })),
       { role: "user", content: `${fixtureBlock}\n\nUSER: ${message}` },
     ];
@@ -178,7 +177,7 @@ export default async function handler(req, res) {
         model: MODEL,
         messages,
         temperature: 0.4,
-        max_tokens: 2400,
+        max_tokens: 1000,
         response_format: { type: "json_object" },
       }),
     });
@@ -202,7 +201,7 @@ export default async function handler(req, res) {
     if (parsed.wantsCode) {
       const legs = resolvePicks(parsed.picks, pool);
       if (!legs.length) {
-        reply += "\n\nI couldn't map those picks to live SportyBet markets, so no booking code was created. Ask again and I'll rebuild it.";
+        reply += "\n\nI couldn't map those picks to live SportyBet markets, so no booking code was created.";
       } else {
         const share = await submitShareCode(
           legs.map((l) => ({
