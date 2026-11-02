@@ -3,7 +3,7 @@ import { fetchUpcomingEvents, fetchEventDetail, submitShareCode } from "./sporty
 export const config = { maxDuration: 60 };
 
 const MODEL = "openai/gpt-oss-20b";
-const MAX_FIXTURES = 10;
+const MAX_FIXTURES = 5;  // Reduced from 10 to save tokens
 const MAX_LEGS = 10;
 const WINDOW_HOURS = 168; // 7 days ahead so games are always found
 
@@ -30,13 +30,10 @@ function lagosLabel(ts) {
 
 function safeMarkets(markets) {
   const picked = [];
+  // Restrict to core markets to dramatically reduce token load
   const wanted = [
-    { id: "1" },
-    { id: "10" },
-    { id: "11" },
-    { id: "29" },
-    { id: "18", specifier: "total=1.5" },
-    { id: "18", specifier: "total=2.5" },
+    { id: "1" },                  // 1X2 Match Winner
+    { id: "18", specifier: "total=2.5" }, // Over/Under 2.5
   ];
   for (const want of wanted) {
     const market = markets.find(
@@ -46,7 +43,7 @@ function safeMarkets(markets) {
     const outcomes = market.outcomes.filter(
       (o) => o.isActive === 1 && Number(o.odds) > 1.01 && Number(o.odds) < 4,
     );
-    if (outcomes.length) picked.push({ ...market, outcomes: outcomes.slice(0, 4) });
+    if (outcomes.length) picked.push({ ...market, outcomes: outcomes.slice(0, 2) }); // Limited to 2 outcomes
   }
   return picked;
 }
@@ -168,7 +165,7 @@ export default async function handler(req, res) {
 
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
-      ...history.slice(-4).map((item) => ({
+      ...history.slice(-2).map((item) => ({ // Reduced history window to save tokens
         role: item.role === "model" || item.role === "assistant" ? "assistant" : "user",
         content: String(
           Array.isArray(item.parts) ? item.parts.map((p) => p.text || "").join("") : item.content || "",
@@ -184,8 +181,7 @@ export default async function handler(req, res) {
         model: MODEL,
         messages,
         temperature: 0.4,
-        max_tokens: 1000
-        // Removed strict response_format json_object to prevent validation crashes
+        max_tokens: 500 // Lowered from 1000 to prevent TPM limits
       }),
     });
 
