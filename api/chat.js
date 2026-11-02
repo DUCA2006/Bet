@@ -2,10 +2,11 @@ import { fetchUpcomingEvents, fetchEventDetail, submitShareCode } from "./sporty
 
 export const config = { maxDuration: 60 };
 
-const MODEL = "openai/gpt-oss-20b";
-const MAX_FIXTURES = 5;  // Reduced from 10 to save tokens
+// Using Llama 3.3 70B for strong JSON adherence and fast execution
+const MODEL = "llama-3.3-70b-versatile"; 
+const MAX_FIXTURES = 5;
 const MAX_LEGS = 10;
-const WINDOW_HOURS = 168; // 7 days ahead so games are always found
+const WINDOW_HOURS = 168;
 
 const SYSTEM_PROMPT = `You are DUCA — a friendly football betting analyst for SportyBet Nigeria. You are warm and fun, and you calculate like a scientist: every pick is backed by statistics.
 
@@ -17,11 +18,11 @@ Rules:
 1. Only use teams, odds and ids from the data. Never invent fixtures, odds or ids.
 2. Open with a friendly line ("Okay, let me check the safest games for you 📊"), then analyse statistically: convert each candidate's odds to implied probability (1/odds as a %), quote that number, and explain why the pick covers.
 3. Tag each pick [Banker], [Solid] or [Lean] with a short reason.
-4. Booking codes: set wantsCode true and put every pick in picks using the EXACT ids: eventId = e, marketId = m.id, specifier = m.s, outcomeId = o.id. Diversify across fixtures and markets.
+4. Booking codes: set wantsCode true and put every pick in picks using the EXACT ids: eventId = e, marketId = m.id, specifier = m.s, outcomeId = o.id.
 5. If the message is not about football or betting, answer in one friendly line and steer back.
-6. End every answer with two final lines: first a fun, feel-good line in the spirit of Ted Lasso, then exactly: "Always gamble with what you can afford to lose."
-7. Return a valid JSON object only in this exact shape:
-{"reply": "your full analysis here", "wantsCode": true, "picks": [{"eventId": "...", "marketId": "...", "specifier": "...", "outcomeId": "..."}]}`;
+6. End every answer with two final lines: first a fun line, then exactly: "Always gamble with what you can afford to lose."
+7. You MUST return a JSON object with this exact key structure:
+{"reply": "your full text here", "wantsCode": true, "picks": [{"eventId": "...", "marketId": "...", "specifier": "...", "outcomeId": "..."}]}`;
 
 function lagosLabel(ts) {
   const d = new Date(ts);
@@ -30,7 +31,6 @@ function lagosLabel(ts) {
 
 function safeMarkets(markets) {
   const picked = [];
-  // Restrict to core markets to dramatically reduce token load
   const wanted = [
     { id: "1" },                  // 1X2 Match Winner
     { id: "18", specifier: "total=2.5" }, // Over/Under 2.5
@@ -43,7 +43,7 @@ function safeMarkets(markets) {
     const outcomes = market.outcomes.filter(
       (o) => o.isActive === 1 && Number(o.odds) > 1.01 && Number(o.odds) < 4,
     );
-    if (outcomes.length) picked.push({ ...market, outcomes: outcomes.slice(0, 2) }); // Limited to 2 outcomes
+    if (outcomes.length) picked.push({ ...market, outcomes: outcomes.slice(0, 2) });
   }
   return picked;
 }
@@ -65,12 +65,12 @@ function fixtureJson(f) {
 }
 
 function parseJson(text) {
+  if (!text) return null;
   try {
-    // Strip markdown code blocks if present
-    const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const clean = text.replace(/```json/gi, "").replace(/```/g, "").trim();
     return JSON.parse(clean);
   } catch {}
-  
+
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start !== -1 && end > start) {
@@ -165,7 +165,7 @@ export default async function handler(req, res) {
 
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
-      ...history.slice(-2).map((item) => ({ // Reduced history window to save tokens
+      ...history.slice(-2).map((item) => ({
         role: item.role === "model" || item.role === "assistant" ? "assistant" : "user",
         content: String(
           Array.isArray(item.parts) ? item.parts.map((p) => p.text || "").join("") : item.content || "",
@@ -180,8 +180,9 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: MODEL,
         messages,
-        temperature: 0.4,
-        max_tokens: 500 // Lowered from 1000 to prevent TPM limits
+        temperature: 0.3,
+        max_tokens: 600,
+        response_format: { type: "json_object" } // Guarantees JSON response back from Groq
       }),
     });
 
@@ -197,19 +198,12 @@ export default async function handler(req, res) {
     const raw = data.choices?.[0]?.message?.content || "";
     const parsed = parseJson(raw);
     
-    if (!parsed || !parsed.reply) {
-      // Fallback if model didn't return perfect JSON
-      return res.status(200).json({
-        ok: true,
-        reply: raw.replace(/```json/g, "").replace(/```/g, "").trim(),
-        code: null
-      });
-    }
+    // Solid fallback if JSON structure is slightly off
+    const replyText = parsed?.reply || raw.replace(/```json/g, "").replace(/```/g, "").trim() || "Here are the top fixtures for today.";
 
-    let reply = String(parsed.reply).trim();
     let code = null;
 
-    if (parsed.wantsCode && Array.isArray(parsed.picks)) {
+    if (parsed?.wantsCode && Array.isArray(parsed.picks)) {
       const legs = resolvePicks(parsed.picks, pool);
       if (legs.length > 0) {
         const share = await submitShareCode(
@@ -239,7 +233,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true, reply, code, gamesAnalysed: pool.length });
+    return res.status(200).json({ ok: true, reply: replyText, code, gamesAnalysed: pool.length });
   } catch (error) {
     console.error("DUCA server error:", error);
     return res.status(500).json({ error: error?.message || "Something went wrong. Please try again." });
